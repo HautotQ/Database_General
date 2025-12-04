@@ -1,0 +1,60 @@
+/* Police pixel Minecraft-like */
+@font-face {
+    font-family: "Minecraft";
+    src: url("https://fonts.cdnfonts.com/s/20790/MinecraftRegular-Bmg3.otf");
+}
+
+body {
+    background: #3a8524 url("https://i.imgur.com/1eZq9hE.png") repeat; /* herbe */
+    color: #ffffff;
+    font-family: "Minecraft", monospace;
+    padding: 20px;
+    image-rendering: pixelated;
+}
+
+/* Titres style Minecraft */
+h1, h2, h3 {
+    color: #fff;
+    text-shadow: 4px 4px 0px #000;
+    letter-spacing: 2px;
+}
+
+/* Boutons façon blocs */
+button {
+    background: #6d6d6d url("https://i.imgur.com/3u3KQGA.png") repeat; /* texture pierre */
+    border: 3px solid #000;
+    padding: 10px 18px;
+    font-family: "Minecraft", monospace;
+    color: white;
+    cursor: pointer;
+    letter-spacing: 1px;
+    box-shadow: 3px 3px 0px #000;
+    image-rendering: pixelated;
+}
+
+button:active {
+    box-shadow: 1px 1px 0px #000;
+    transform: translate(2px, 2px);
+}
+
+/* Champs texte "inventaire" */
+input {
+    background: #c6c6c6 url("https://i.imgur.com/TjvV0em.png") repeat;
+    border: 3px solid #000;
+    padding: 6px;
+    font-family: "Minecraft", monospace;
+    color: #000;
+    box-shadow: inset 2px 2px 0px #555;
+    image-rendering: pixelated;
+}
+
+/* Panneaux */
+.settings-button, .card, div {
+    border-radius: 0px !important;
+}
+
+p {
+    font-family: "Minecraft", monospace;
+    color: white;
+    text-shadow: 2px 2px 0px #000;
+}
