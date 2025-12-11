@@ -1,23 +1,22 @@
-/* Import de la police depuis Google Fonts */
+/* Police arcade 8-bit depuis Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
 body {
     margin: 0;
     font-family: 'Press Start 2P', monospace;
-    background-color: #0a0a0a; /* fond sombre arcade */
-    color: #39ff14; /* vert néon type arcade */
+    background-color: #000;
+    color: #39ff14;
     overflow: hidden;
     width: 100vw;
     height: 100vh;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     padding: 20px;
     box-sizing: border-box;
-    text-shadow:
-        0 0 1px #39ff14,
-        0 0 3px #39ff14,
-        0 0 6px #39ff14;
+    line-height: 1.2;
+    letter-spacing: 0;
+    image-rendering: pixelated;
 }
 
 * {
@@ -25,8 +24,25 @@ body {
     user-select: none;
 }
 
+/* Effet scintillement aléatoire */
+@keyframes flicker {
+    0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
+    20%, 22%, 24%, 55% { opacity: 0.4; }
+}
+
+.flicker {
+    animation: flicker 1s infinite;
+}
+
 input {
     pointer-events: auto;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    color: #39ff14;
+    background-color: #111;
+    border: 2px solid #39ff14;
+    padding: 4px;
+    box-sizing: border-box;
 }
 
 div.container {
@@ -34,25 +50,19 @@ div.container {
     height: 100vh;
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-    box-sizing: border-box;
+    gap: 10px;
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding: 15px;
 }
 
 #terminal-title {
     display: inline-block;
     white-space: nowrap;
     overflow: hidden;
-    border-right: 3px solid #39ff14;
+    border-right: 2px solid #39ff14;
     width: 0ch;
-    will-change: width;
     animation: typing 3s steps(40, end) forwards, blink 0.7s step-end infinite;
-    text-shadow:
-        0 0 2px #39ff14,
-        0 0 6px #39ff14,
-        0 0 12px #39ff14;
 }
 
 @keyframes typing {
@@ -68,42 +78,40 @@ button {
     background-color: #111;
     color: #39ff14;
     border: 2px solid #39ff14;
-    padding: 12px 24px;
+    padding: 6px 12px;
     font-family: 'Press Start 2P', monospace;
-    font-size: 16px;
+    font-size: 12px;
     cursor: pointer;
-    margin-top: 15px;
+    margin-top: 6px;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    box-shadow: 0 0 5px #39ff14, 0 0 10px #39ff14;
+    letter-spacing: 0;
 }
 
 button:hover {
-    background-color: #1a1a1a;
-    box-shadow: 0 0 10px #39ff14, 0 0 20px #39ff14;
+    background-color: #111;
 }
 
 p, span {
     font-family: 'Press Start 2P', monospace;
-    font-size: 14px;
-    line-height: 1.5;
+    font-size: 12px;
 }
 
 .cursor {
     display: inline-block;
-    width: 8px;
+    width: 6px;
+    height: 12px;
     background-color: #39ff14;
     animation: blink 1s infinite;
 }
 
-/* ===== Modal style arcade ===== */
+/* ===== Modal style arcade 8-bit ===== */
 .edit-modal {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0,0,0,0.85);
+    background-color: rgba(0,0,0,0.95);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -114,53 +122,53 @@ p, span {
     background-color: #111;
     border: 3px solid #39ff14;
     border-radius: 0;
-    padding: 25px;
+    padding: 15px;
     min-width: 320px;
     max-width: 90vw;
-    box-shadow: 0 0 20px #39ff14;
     font-family: 'Press Start 2P', monospace;
     color: #39ff14;
 }
 
 .edit-modal-container h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
+    margin: 0 0 12px 0;
     color: #39ff14;
     text-align: center;
-    text-shadow: 0 0 5px #39ff14;
+    font-size: 12px;
 }
 
 .edit-modal textarea, .edit-textarea {
     width: 100%;
-    height: 80px;
+    height: 60px;
     background-color: #111;
     color: #39ff14;
     border: 2px solid #39ff14;
-    padding: 8px;
+    padding: 4px;
     font-family: 'Press Start 2P', monospace;
     box-sizing: border-box;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     resize: none;
-    text-shadow: 0 0 3px #39ff14;
 }
 
 .edit-modal-buttons {
     display: flex;
     justify-content: flex-end;
-    gap: 10px;
+    gap: 6px;
 }
 
 .edit-modal-buttons button {
-    padding: 10px 16px;
+    padding: 4px 8px;
     border: 2px solid #39ff14;
     font-family: 'Press Start 2P', monospace;
     background-color: #111;
     color: #39ff14;
     cursor: pointer;
-    box-shadow: 0 0 5px #39ff14;
 }
 
 .edit-modal-buttons button:hover {
-    background-color: #1a1a1a;
-    box-shadow: 0 0 10px #39ff14;
+    background-color: #111;
+}
+
+/* Appliquer scintillement à tout texte */
+body, p, span, #terminal-title, .edit-modal-container, button {
+    animation: flicker 2s infinite alternate;
 }
