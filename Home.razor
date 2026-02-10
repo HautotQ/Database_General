@@ -1,0 +1,13 @@
+﻿@page "/"
+@inject QuestionStore Store
+
+<PageTitle>Home</PageTitle>
+
+<h1>Bienvenue sur OpenCraft !</h1>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Store.LoadQuestionsAsync();
+    }
+}

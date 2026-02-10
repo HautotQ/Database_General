@@ -1,0 +1,111 @@
+<style>
+.edit-modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.edit-modal-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    min-width: 300px;
+    max-width: 500px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+.edit-modal h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.edit-textarea {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 8px;
+    font-size: 1rem;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    resize: vertical;
+}
+
+.edit-modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.edit-modal-buttons button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    background-color: #1b6ec2;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.edit-modal-buttons button:hover {
+    background-color: #155a9c;
+}
+</style>
+
+@if (IsVisible)
+{
+    <div class="edit-modal" @onclick="BackgroundClick">
+        <div class="edit-modal-container" @onclick:stopPropagation="true">
+            <h3>Modifier la question</h3>
+
+            <textarea class="edit-textarea" @bind="Query" placeholder="Question"></textarea>
+            <textarea class="edit-textarea" @bind="Answer" placeholder="Réponse"></textarea>
+
+            <div class="edit-modal-buttons">
+                <button @onclick="Cancel">Annuler</button>
+                <button @onclick="Save">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string InitialQuery { get; set; }
+    [Parameter] public string InitialAnswer { get; set; }
+    [Parameter] public EventCallback<(string NewQuery, string NewAnswer)> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool IsVisible { get; set; } = true;
+    private string Query;
+    private string Answer;
+
+    protected override void OnInitialized()
+    {
+        Query = InitialQuery;
+        Answer = InitialAnswer;
+    }
+
+    private async Task Save()
+    {
+        if (!string.IsNullOrWhiteSpace(Query) && !string.IsNullOrWhiteSpace(Answer))
+        {
+            IsVisible = false;
+            await OnSave.InvokeAsync((Query.Trim(), Answer.Trim()));
+        }
+    }
+
+    private async Task Cancel()
+    {
+        IsVisible = false;
+        await OnCancel.InvokeAsync();
+    }
+
+    private void BackgroundClick()
+    {
+        Cancel();
+    }
+}

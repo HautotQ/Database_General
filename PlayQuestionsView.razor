@@ -1,0 +1,255 @@
+@page "/PlayQuestionsView"
+@inject QuestionStore Store
+@using System.Globalization;
+@using System.Text;
+@using System.Security.Cryptography;
+
+
+@if (Questions.Count == 0)
+{
+    <div class="no-questions">
+        <h3>Jouer les Questions</h3>
+        <h3>
+            Pas de Questions...
+        </h3>
+        Vous n'avez pas de Questions enregistrées, mais ce n'est pas grave! Vous pouvez cliquer sur Ajouter une Question pour en avoir un max!
+    </div>
+}
+else if (ShowEndView)
+{
+    <h2>Félicitations !</h2>
+    <h4>Vous pouvez rejouer à tout moment en recliquant sur Jouer les Questions.</h4>
+}
+else
+{
+    <h3>Jouer les Questions</h3>
+    
+    <div class="progress-bar">
+        <div class="progress" style="width:@ProgressPercentage%;"></div>
+    </div>
+
+    <div class="question-label">
+        <h4>@CurrentQuestion.Query</h4>
+    </div>
+
+    <input class="answer-field"
+           autocomplete="off"
+           autocapitalize="off"
+           spellcheck="false"
+           type="text"
+           placeholder="Réponse"
+           @bind="UserAnswer"
+           @bind:event="oninput"
+           @onkeydown="HandleKeyDown"
+    />
+
+    <button @onclick="CheckAnswer">
+        Vérifier la réponse
+    </button>
+    
+    @if (ShowAlert && CurrentQuestion != null)
+    {
+        <Alert Title="Mince..."
+               Message=@($"La bonne réponse était: {CurrentQuestion.Answer}")
+               OnOk="HideAlert" />
+    }
+}
+
+@code {
+    List<Question> Questions = new();
+    bool IsActive;
+    Question CurrentQuestion;
+    //QuestionStore Store;
+    string UserAnswer = "";
+    bool ShowAlert = false;
+    bool onEndView = false;
+    List<Question> RemainingQuestions;
+    List<Question> IncorrectQuestions;
+    bool ShouldReaskIncorrectQuestions, AllQuestionsAnsweredOnce;
+    int Score;
+    bool ShowEndView;
+    // Pourcentage de progression
+    int ProgressPercentage => Questions.Count == 0 ? 0 : (int)(((double)(Questions.Count - RemainingQuestions.Count) / Questions.Count) * 100);
+
+
+    
+    protected override void OnInitialized()
+    {
+        Questions = Store.GetObservableQuestions() ?? new();
+        RemainingQuestions = Questions.ToList();
+        IncorrectQuestions = new();
+        ShuffleQuestions();
+        AskNextQuestion();
+    }
+
+
+
+    private List<Question> LoadQuestions()
+    {
+        RemainingQuestions = Store.GetObservableQuestions();
+        return RemainingQuestions;
+    }
+
+    void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            CheckAnswer();
+        }
+    }
+
+    void CheckAnswer()
+    {
+        string correctAnswer = CurrentQuestion.Answer;
+
+        // Normalisation des deux chaînes
+        string user = Normalize(UserAnswer);
+        string correct = Normalize(correctAnswer);
+
+        if (string.IsNullOrWhiteSpace(user))
+        {
+            ShowAlert = true;
+            MarkIncorrect();
+        }
+        else if (user == correct || (Store.CoolModeEnabled && IsApproximatelyEqual(user, correct)))
+        {
+            if (IncorrectQuestions.Contains(CurrentQuestion)) Score++;
+            AskNextQuestion();
+        }
+        else
+        {
+            ShowAlert = true;
+            MarkIncorrect();
+        }
+    }
+    
+    void ShuffleQuestions()
+    {
+        List<Question> arr = RemainingQuestions;
+
+        for (int i = arr.Count - 1; i > 0; i--)
+        {
+            // Crée un tableau de 4 octets pour un UInt32
+            byte[] bytes = new byte[4];
+            RandomNumberGenerator.Fill(bytes);
+            uint randomValue = BitConverter.ToUInt32(bytes, 0);
+
+            int j = (int)(randomValue % (i + 1)); // indice aléatoire
+
+            // Swap classique C#
+            Question temp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = temp;
+        }
+    }
+
+    void AskNextQuestion()
+    {
+        // Réinjecter les mauvaises réponses et remélanger
+        if (ShouldReaskIncorrectQuestions)
+        {
+            ShouldReaskIncorrectQuestions = false;
+
+            if (IncorrectQuestions.Count > 0)
+            {
+                RemainingQuestions.Add(CurrentQuestion);
+                IncorrectQuestions = [];
+                ShuffleQuestions();
+            }
+        }
+
+        // Si plus aucune question → fin
+        if (RemainingQuestions.Count == 0)
+        {
+            ShowEndView = true;  // ⚡️ montrer la fin
+            CurrentQuestion = null;
+            UserAnswer = "";
+            ShowAlert = false;
+            StateHasChanged();
+            return;
+        }
+
+        // Tirage de la question suivante
+        CurrentQuestion = RemainingQuestions[0];
+        RemainingQuestions.RemoveAt(0);
+        ShowAlert = false;
+        UserAnswer = "";
+    
+        StateHasChanged();
+    }
+
+
+    void MarkIncorrect()
+    {
+        IncorrectQuestions.Add(CurrentQuestion);
+        ShouldReaskIncorrectQuestions = true;
+        UserAnswer = "";
+    }
+
+    bool IsApproximatelyEqual(string a, string b)
+    {
+        string normA = Normalize(a);
+        string normB = Normalize(b);
+
+        int distance = LevenshteinDistance(normA, normB);
+        double threshold = Math.Ceiling(normB.Length * 0.2);
+
+        return distance <= threshold;
+    }
+
+    int LevenshteinDistance(string a, string b)
+    {
+        int[,] matrix = new int[a.Length + 1, b.Length + 1];
+
+        for (int i = 0; i <= a.Length; ++i) matrix[i, 0] = i;
+        for (int j = 0; j <= b.Length; ++j) matrix[0, j] = j;
+
+        for (int i = 1; i <= a.Length; i++)
+        {
+            for (int j = 1; j <= b.Length; j++)
+            {
+                int cost = a[i - 1] == b[j - 1] ? 0 : 1;
+
+                matrix[i, j] = Math.Min(
+                    Math.Min(
+                        matrix[i - 1, j] + 1,
+                        matrix[i, j - 1] + 1
+                    ),
+                    matrix[i - 1, j - 1] + cost
+                );
+            }
+        }
+        return matrix[a.Length, b.Length];
+    }
+    
+    private void HideAlert() => ShowAlert = false;
+    
+    
+    string Normalize(string str)
+    {
+        if (string.IsNullOrWhiteSpace(str))
+            return "";
+
+        // Décomposition Unicode (équivalent NFD)
+        string normalized = str.Normalize(NormalizationForm.FormD);
+
+        // Suppression des accents
+        StringBuilder sb = new();
+
+        foreach (char c in normalized)
+        {
+            var unicodeCategory = Char.GetUnicodeCategory(c);
+
+            if (unicodeCategory != UnicodeCategory.NonSpacingMark)
+            {
+                sb.Append(c);
+            }
+        }
+
+        // Recomposition + lowercase
+        return sb.ToString()
+            .Normalize(NormalizationForm.FormC)
+            .ToLower();
+    }
+
+}

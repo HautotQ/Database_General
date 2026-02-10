@@ -1,0 +1,188 @@
+@page "/ViewQuestionsView"
+@inject IJSRuntime JS
+
+<style>
+.question-item {
+    padding: 8px 12px;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 4px;
+}
+.question-item:last-child {
+    border-bottom: none;
+}
+.render-list-container:hover {
+    background-color: #f9f9f9;
+}
+.hstack {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.scroll-view {
+    overflow-y: auto;
+    max-height: 100vh;
+}
+</style>
+
+<h3>Gestion des Questions</h3>
+
+<div class="hstack">
+    <InputFile OnChange="HandleImport" />
+    <button @onclick="ExportFile">Exporter</button>
+    <button @onclick="ShowClearAlert">Tout supprimer</button>
+</div>
+
+<input class="edit-textarea" placeholder="Titre de la liste" style="height:30px;" @bind="Filename" />
+
+<div class="scroll-view" style="margin-top:10px;">
+    @foreach (var q in Questions)
+    {
+        <div class="render-list-container question-item" @onclick="(e => ToggleMenu(q))" @oncontextmenu="(e => ToggleMenu(q, true, e))">
+            <div>
+                <strong>Q:</strong> @q.Query<br />
+                <strong>R:</strong> @q.Answer
+            </div>
+
+            @if (OpenMenu == q)
+            {
+                <div class="menu">
+                    <button class="modify-btn" @onclick="(async e => await ModifyQuestion(q))">Modifier</button>
+                    <button class="del-btn" @onclick="() => DeleteQuestion(q)">Supprimer</button>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (ShowAlert)
+{
+    <Alert Title="Supprimer toutes les questions ?"
+           Message="Elles seront perdues si vous ne les avez pas enregistrées."
+           OnOk="ClearQuestionsConfirmed"
+           OnCancel="HideAlert" />
+}
+
+@if (EditingQuestion != null)
+{
+    <EditQuestionModal 
+        InitialQuery=@EditingQuestion.Query
+        InitialAnswer=@EditingQuestion.Answer
+        OnSave="OnEditSave"
+        OnCancel="CancelEdit" />
+}
+
+@code {
+    private QuestionStore Store;
+    private List<Question> Questions = new();
+    private string Filename = "questions";
+    private Question OpenMenu = null;
+    private Question EditingQuestion = null;
+    private bool ShowAlert = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Store = new QuestionStore(JS);
+        Store.Subscribe(list =>
+        {
+            Questions = list;
+            StateHasChanged();
+        });
+
+        await Store.LoadQuestionsAsync();
+    }
+
+    private void ToggleMenu(Question q, bool isRightClick = false, Microsoft.AspNetCore.Components.Web.MouseEventArgs e = null)
+    {
+        OpenMenu = OpenMenu == q ? null : q;
+    }
+
+    private async Task DeleteQuestion(Question q)
+    {
+        int index = Questions.IndexOf(q);
+        if (index == -1) return;
+
+        await Store.DeleteQuestionAsync(index);
+
+        OpenMenu = null;
+    }
+
+    private Task ModifyQuestion(Question q)
+    {
+        EditingQuestion = q;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnEditSave((string NewQuery, string NewAnswer) updated)
+    {
+        if (EditingQuestion != null)
+        {
+            int index = Questions.IndexOf(EditingQuestion);
+            await Store.UpdateQuestionAtAsync(index, updated.NewQuery, updated.NewAnswer);
+            EditingQuestion = null;
+        }
+    }
+
+    private void CancelEdit()
+    {
+        EditingQuestion = null;
+    }
+
+    private void ShowClearAlert() => ShowAlert = true;
+    private void HideAlert() => ShowAlert = false;
+
+    private async Task ClearQuestionsConfirmed()
+    {
+        ShowAlert = false;
+        await Store.ClearAsync();
+    }
+
+    private async Task ExportFile()
+    {
+        if (Questions.Count == 0) return;
+
+        var filename = string.IsNullOrWhiteSpace(Filename) ? "questions.clist" : Filename.Trim();
+        if (!filename.EndsWith(".clist"))
+            filename += ".clist";
+
+        var content = string.Join("\n", Questions.SelectMany(q => new[] { q.Query, q.Answer, "" }));
+        var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+        var base64 = Convert.ToBase64String(bytes);
+        var href = $"data:text/plain;base64,{base64}";
+
+        await JS.InvokeVoidAsync("eval",
+            $"var a = document.createElement('a'); a.href='{href}'; a.download='{filename}'; document.body.appendChild(a); a.click(); document.body.removeChild(a);");
+    }
+
+    private async Task HandleImport(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        if (!file.Name.EndsWith(".txt") && !file.Name.EndsWith(".clist"))
+        {
+            await JS.InvokeVoidAsync("alert", "Veuillez sélectionner un fichier .txt ou .clist");
+            return;
+        }
+
+        await Store.ClearAsync();
+
+        using var stream = file.OpenReadStream();
+        using var reader = new StreamReader(stream);
+        var content = await reader.ReadToEndAsync();
+
+        var lines = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < lines.Length; i += 2)
+        {
+            if (i + 1 < lines.Length)
+            {
+                await Store.AddQuestionAsync(new Question
+                {
+                    Query = lines[i].Trim(),
+                    Answer = lines[i + 1].Trim()
+                });
+            }
+        }
+
+        Filename = file.Name;
+    }
+}

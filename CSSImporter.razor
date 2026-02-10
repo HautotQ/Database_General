@@ -1,0 +1,48 @@
+@page "/CSSImporter"
+@inject IJSRuntime JS
+@using Microsoft.AspNetCore.Components.Forms
+
+<h3>Modifier le CSS</h3>
+
+Sélectionnez un .css pour remplacer le style actuel.<br/>
+<InputFile OnChange="OnFileSelected" accept=".css" /><br/>
+
+<button class="reset-btn" @onclick="ResetCss">Réinitialiser le CSS par défaut</button>
+
+<style id="custom-css"></style>
+
+@code {
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        using var stream = file.OpenReadStream();
+        using var reader = new StreamReader(stream);
+        var css = await reader.ReadToEndAsync();
+
+        // Stockage dans localStorage
+        await JS.InvokeVoidAsync("localStorage.setItem", "customCSS_content", css);
+
+        // Injection dans le <style>
+        await JS.InvokeVoidAsync("eval", $"document.getElementById('custom-css').textContent = `{css}`;");
+    }
+
+    private async Task ResetCss()
+    {
+        await JS.InvokeVoidAsync("eval", "document.getElementById('custom-css').textContent = '';");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "customCSS_content");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var savedCSS = await JS.InvokeAsync<string>("localStorage.getItem", "customCSS_content");
+            if (!string.IsNullOrEmpty(savedCSS))
+            {
+                await JS.InvokeVoidAsync("eval", $"document.getElementById('custom-css').textContent = `{savedCSS}`;");
+            }
+        }
+    }
+}

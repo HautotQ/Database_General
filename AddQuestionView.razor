@@ -1,0 +1,68 @@
+@page "/AddQuestionView"
+@inject QuestionStore Store
+
+<h3>Ajouter une Question</h3>
+
+<input 
+    class="edit-textarea"
+    autocomplete="off"
+    autocapitalize="off"
+    spellcheck="false"
+    placeholder="Ta Question ici..."
+    @bind="NewQuestion"
+    @onkeydown="HandleKeyDown"
+    />
+
+<input
+    class="edit-textarea"
+    autocomplete="off"
+    autocapitalize="off"
+    spellcheck="false"
+    placeholder="Ta Réponse ici..."
+    @bind="NewAnswer"
+    @onkeydown="HandleKeyDown"
+    />
+
+<button @onclick="AddQuestion">Ajoute ta Question</button>
+
+@if (ShowAlert)
+{
+    <Alert Title="Oh oh..."
+           Message="Tu ne peux pas laisser de question ou de réponse vide..."
+           OnOk="HideAlert"
+           />
+}
+
+@code {
+    private string NewQuestion = "";
+    private string NewAnswer = "";
+    private bool ShowAlert = false;
+
+    private async Task AddQuestion()
+    {
+        if (!string.IsNullOrWhiteSpace(NewQuestion) && !string.IsNullOrWhiteSpace(NewAnswer))
+        {
+            if (NewQuestion == "" || NewAnswer == "")
+            {
+                ShowAlert = true;
+            }
+            else
+            {
+                var q = new Question { Query = NewQuestion, Answer = NewAnswer };
+                await Store.AddQuestionAsync(q);
+
+                // vider les champs après ajout
+                NewQuestion = "";
+                NewAnswer = "";
+            }
+        }
+    }
+    private void HideAlert() => ShowAlert = false;
+    void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            AddQuestion();
+        }
+    }
+}

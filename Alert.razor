@@ -1,0 +1,99 @@
+<!-- Alert.razor -->
+<style>
+.alert-modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.alert-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    min-width: 300px;
+    max-width: 450px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    text-align: center;
+}
+
+.alert-message {
+    margin: 12px 0;
+}
+
+.alert-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.alert-btn {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 4px;
+    background-color: #1b6ec2;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.alert-btn:hover {
+    background-color: #155a9c;
+}
+</style>
+
+@if (IsVisible)
+{
+    <div class="alert-modal" @onclick="BackgroundClick">
+        <div class="alert-container" @onclick:stopPropagation="true">
+            <h2>@Title</h2>
+            <div class="alert-message">@Message</div>
+            <div class="alert-buttons">
+                @if (OnCancel.HasDelegate)
+                {
+                    <button class="alert-btn" @onclick="CancelClicked">Annuler</button>
+                }
+                @if (OnOk.HasDelegate)
+                {
+                    <button class="alert-btn" @onclick="OkClicked">OK</button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Title { get; set; }
+    [Parameter] public string Message { get; set; }
+    [Parameter] public EventCallback OnOk { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool IsVisible { get; set; } = true;
+
+    private async Task OkClicked()
+    {
+        IsVisible = false;
+        if (OnOk.HasDelegate)
+            await OnOk.InvokeAsync();
+    }
+
+    private async Task CancelClicked()
+    {
+        IsVisible = false;
+        if (OnCancel.HasDelegate)
+            await OnCancel.InvokeAsync();
+    }
+
+    private async void BackgroundClick()
+    {
+        if (OnCancel.HasDelegate)
+            await CancelClicked();
+        else if (OnOk.HasDelegate)
+            await OkClicked();
+    }
+}
