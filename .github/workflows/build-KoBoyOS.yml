@@ -12,12 +12,14 @@ jobs:
         uses: actions/checkout@v4
 
       # 🆕 Télécharger le .arm64 depuis une release
-      - name: 📦 Télécharger le launcher depuis release
-        uses: robinraju/release-downloader@v1
-        with:
-          repository: "HautotQ/Database_General"
-          tag: "v1.2.5"
-          fileName: "KoBoyOS-launcher.arm64"
+      - name: 📦 Télécharger le launcher
+        run: |
+          wget -O KoBoyOS-launcher.arm64 \
+          https://github.com/TON-USERNAME/TON-REPO/releases/latest/download/KoBoyOS-launcher.arm64
+
+      - name: 🔐 Vérifier SHA256
+        run: |
+          echo "91ffe17c39e2663b0286fc5dbed86cdedb3eccdadf878a84fe9450d910a5bfcd  KoBoyOS-launcher.arm64" | sha256sum -c -
           
       - name: 📦 Installer dépendances
         run: |
