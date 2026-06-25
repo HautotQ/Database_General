@@ -15,7 +15,7 @@ jobs:
       - name: 📦 Télécharger le launcher
         run: |
           wget -O KoBoyOS-launcher.arm64 \
-          https://github.com/TON-USERNAME/TON-REPO/releases/latest/download/KoBoyOS-launcher.arm64
+          https://github.com/HautotQ/Database_General/releases/latest/download/KoBoyOS-launcher.arm64
 
       - name: 🔐 Vérifier SHA256
         run: |
