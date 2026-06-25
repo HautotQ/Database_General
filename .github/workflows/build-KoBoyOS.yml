@@ -11,6 +11,14 @@ jobs:
       - name: 📥 Checkout repo
         uses: actions/checkout@v4
 
+      # 🆕 Télécharger le .arm64 depuis une release
+      - name: 📦 Télécharger le launcher depuis release
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: "HautotQ/Database_General"
+          tag: "v1.2.5"
+          fileName: "KoBoyOS-launcher.arm64"
+          
       - name: 📦 Installer dépendances
         run: |
           sudo apt update
@@ -33,59 +41,48 @@ jobs:
           cd buildroot
           git checkout 2024.02
 
-      - name: ⚙️ Configurer Buildroot (ARM64)
+      - name: ⚙️ Configurer Buildroot
         run: |
           cd buildroot
           make qemu_aarch64_virt_defconfig
 
-      - name: 📁 Ajouter ton launcher
+      - name: 📁 Préparer overlay + init
         run: |
-          mkdir -p buildroot/board/koboye
-          
-          # Copier ton exécutable dans rootfs
-          cp KoBoyOS-launcher.arm64 buildroot/board/koboye/launcher
+          mkdir -p buildroot/board/koboye/rootfs-overlay
 
-          chmod +x buildroot/board/koboye/launcher
+          # Déplacer le fichier téléchargé
+          mv KoBoyOS-launcher.arm64 buildroot/board/koboye/rootfs-overlay/launcher
+          chmod +x buildroot/board/koboye/rootfs-overlay/launcher
 
-          # Créer un script init personnalisé
-          cat << 'EOF' > buildroot/board/koboye/init
+          # Script init (PID 1)
+          cat << 'EOF' > buildroot/board/koboye/rootfs-overlay/init
           #!/bin/sh
 
-          # Monter les systèmes nécessaires
           mount -t proc none /proc
           mount -t sysfs none /sys
 
-          echo "Démarrage KoBoyOS..."
+          echo "KoBoyOS boot..."
 
-          # Lancer ton binaire directement
           exec /launcher
           EOF
 
-          chmod +x buildroot/board/koboye/init
+          chmod +x buildroot/board/koboye/rootfs-overlay/init
 
-      - name: 🧩 Intégrer dans rootfs overlay
-        run: |
-          mkdir -p buildroot/board/koboye/rootfs-overlay
-          cp buildroot/board/koboye/launcher buildroot/board/koboye/rootfs-overlay/
-          cp buildroot/board/koboye/init buildroot/board/koboye/rootfs-overlay/
-
-      - name: 🔧 Configurer overlay et init
+      - name: 🔧 Config Buildroot
         run: |
           cd buildroot
 
           echo 'BR2_ROOTFS_OVERLAY="board/koboye/rootfs-overlay"' >> .config
-          echo 'BR2_TARGET_GENERIC_GETTY_PORT=""' >> .config
-          echo 'BR2_TARGET_GENERIC_GETTY_BAUDRATE_115200=y' >> .config
           echo 'BR2_INIT_NONE=y' >> .config
 
           make olddefconfig
 
-      - name: 🏗️ Build Buildroot
+      - name: 🏗️ Build
         run: |
           cd buildroot
           make -j$(nproc)
 
-      - name: 📦 Préparer artefacts
+      - name: 📦 Préparer output
         run: |
           mkdir output-final
           cp -r buildroot/output/images/* output-final/
