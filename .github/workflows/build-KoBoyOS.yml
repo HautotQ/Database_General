@@ -1,0 +1,97 @@
+name: Build KoBoyOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v4
+
+      - name: 📦 Installer dépendances
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            build-essential \
+            git \
+            wget \
+            cpio \
+            unzip \
+            rsync \
+            bc \
+            bison \
+            flex \
+            libssl-dev \
+            libncurses5-dev
+
+      - name: 📥 Télécharger Buildroot
+        run: |
+          git clone https://github.com/buildroot/buildroot.git
+          cd buildroot
+          git checkout 2024.02
+
+      - name: ⚙️ Configurer Buildroot (ARM64)
+        run: |
+          cd buildroot
+          make qemu_aarch64_virt_defconfig
+
+      - name: 📁 Ajouter ton launcher
+        run: |
+          mkdir -p buildroot/board/koboye
+          
+          # Copier ton exécutable dans rootfs
+          cp KoBoyOS-launcher.arm64 buildroot/board/koboye/launcher
+
+          chmod +x buildroot/board/koboye/launcher
+
+          # Créer un script init personnalisé
+          cat << 'EOF' > buildroot/board/koboye/init
+          #!/bin/sh
+
+          # Monter les systèmes nécessaires
+          mount -t proc none /proc
+          mount -t sysfs none /sys
+
+          echo "Démarrage KoBoyOS..."
+
+          # Lancer ton binaire directement
+          exec /launcher
+          EOF
+
+          chmod +x buildroot/board/koboye/init
+
+      - name: 🧩 Intégrer dans rootfs overlay
+        run: |
+          mkdir -p buildroot/board/koboye/rootfs-overlay
+          cp buildroot/board/koboye/launcher buildroot/board/koboye/rootfs-overlay/
+          cp buildroot/board/koboye/init buildroot/board/koboye/rootfs-overlay/
+
+      - name: 🔧 Configurer overlay et init
+        run: |
+          cd buildroot
+
+          echo 'BR2_ROOTFS_OVERLAY="board/koboye/rootfs-overlay"' >> .config
+          echo 'BR2_TARGET_GENERIC_GETTY_PORT=""' >> .config
+          echo 'BR2_TARGET_GENERIC_GETTY_BAUDRATE_115200=y' >> .config
+          echo 'BR2_INIT_NONE=y' >> .config
+
+          make olddefconfig
+
+      - name: 🏗️ Build Buildroot
+        run: |
+          cd buildroot
+          make -j$(nproc)
+
+      - name: 📦 Préparer artefacts
+        run: |
+          mkdir output-final
+          cp -r buildroot/output/images/* output-final/
+
+      - name: ⬆️ Upload OS
+        uses: actions/upload-artifact@v4
+        with:
+          name: KoBoyOS
+          path: output-final
